@@ -23,9 +23,15 @@ class Renamer  {
                 .filter(File::exists)
                 .filter(File::isFile)
                 .map(Renamer::toUuid)
+                .filter(Objects::nonNull)
                 .collect(Collectors.toList());
 
         container.sort(Comparator.comparingLong(File::lastModified));
+        if (reverseOrder()) {
+            Collections.reverse(container);
+        }
+
+        count = addNewCount() ? setNewCount() : 1;
 
         container.forEach(Renamer::toFinalName);
     }
@@ -49,11 +55,22 @@ class Renamer  {
 
     // Итоговое переименование
     private static void toFinalName(File file)  {
-        if (file.exists() && file.isFile()) {
+        if (file != null && file.exists() && file.isFile()) {
             StringBuilder finalName = new StringBuilder();
-            String format = getFormat(file);
+            String format = addNewFormat() ? getNewFormat() : getFormat(file);
+            String baseName;
 
-            finalName.append(getPath()).append(getModifiedName()).append(getCount()).append(format); /// constructFinalName
+            try {
+                baseName = (onlyDefaultSettings()) ? null : constructFinalName(file);
+            }
+            catch (IOException e) {
+                baseName = null;
+            }
+
+            if (baseName == null) {
+                baseName = getPath() + getModifiedName() + getCount();
+            }
+            finalName.append(baseName).append(format);
 
             System.out.println("name "+file.getName());
             System.out.println("path "+file.toPath());
